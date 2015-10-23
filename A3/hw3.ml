@@ -155,13 +155,14 @@ module Problem3 = struct
   =fun pgm -> eval pgm empty_env;;
 
 (* Tests *)
+  (*
     let pgm1 = CONST 1;;
     let pgm2 = ADD (ADD (CONST 5, CONST 2), SUB (CONST 3, CONST 10));; (* (5+2)+(3-10) = 0 *)
     let pgm3 = IF (ISZERO (CONST 1), CONST 3, CONST 4);; (* if iszero 1 then 3 else 4 *)
     if not (run pgm1 = Int 1) then print_string("Fail 3.1");;
     if not (run pgm2 = Int 0) then print_string("Fail 3.2");;
     if not (run pgm3 = Int 4) then print_string("Fail 3.3");;
-
+*)
 end
 
 (***********************************)

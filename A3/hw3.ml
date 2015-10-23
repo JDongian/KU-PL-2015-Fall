@@ -194,9 +194,62 @@ module Problem4 = struct
     | NL_LET of nl_exp * nl_exp
     | NL_PROC of nl_exp 
     | NL_CALL of nl_exp * nl_exp
-  
-  let translate : program -> nl_program
-  =fun pgm -> NL_CONST 0 (* TODO *)
+
+  let rec index
+  =fun (l,e,agg) -> match l with
+    | [] -> agg
+    | h::t -> if h = e then agg+1 else index(t,e,agg+1);;
+
+  let empty_env = [];;
+  let extend_env e x = match index(e,x,-1) with
+    | -1 -> x::e
+    | _ -> raise (Failure "namespace collision.");;
+  let apply_env e x = index(e,x,-1);;
+
+  let rec trans : program * (string list) -> nl_program
+  =fun (prog,env) ->
+        match prog with
+        | CONST n -> NL_CONST n
+        | VAR x -> NL_VAR (apply_env env x)
+        | ADD (e1,e2) ->
+            NL_ADD (trans(e1,env),
+                    trans(e2,env))
+        | SUB (e1,e2) ->
+            NL_SUB (trans(e1,env),
+                    trans(e2,env))
+        | ISZERO e -> NL_ISZERO (trans(e,env))
+        | IF (e1,e2,e3) ->
+            NL_IF (trans(e1,env),
+                   trans(e2,env),
+                   trans(e3,env))
+        | LET (x,e1,e2) ->
+            let nl2 = trans(e1,env) in
+            let nl1 = trans(e2,(extend_env env x)) in
+            NL_LET (nl1, nl2)
+        | PROC (_,e) -> NL_PROC (trans(e,env))
+        | _ -> raise (Failure "Not implemented.");;
+        (*
+        | CALL (e1,e2) ->
+            (match trans(e1,env) with
+            | NL_PROC e ->
+                (let nl2 = trans(e2,env) in
+                trans(e,(extend_env p x))))
+                *)
+
+  let rec translate : program -> nl_program
+  =fun pgm ->
+    let nl_env = empty_env in
+    trans (pgm,nl_env);;
+
+(* Tests *)
+(*
+  let pgm0 = ADD (VAR "y", VAR "x");;
+  let test0 = translate(pgm0);;
+  let pgm1 = LET ("x", CONST 37,
+    PROC ("y", LET ("z", ADD (VAR "y", VAR "x"),
+        ADD (VAR "x", VAR "y"))));;
+  let test1 = translate(pgm1);;
+  *)
 end
 
 (***********************************)
@@ -209,7 +262,22 @@ module Problem5 = struct
                 | NL_Bool of bool 
                 | NL_Procedure of nl_exp * nl_env
   and nl_env = nl_value list
-  
+
+  let rec eval : nl_exp -> nl_env -> nl_value
+  =fun exp env -> NL_Int 0;;
+  (*
+    match pgm with
+    | NL_CONST n -> NL_Int n
+    | NL_VAR n -> nl_env
+    | NL_ADD of nl_exp * nl_exp
+    | NL_SUB of nl_exp * nl_exp
+    | NL_ISZERO of nl_exp
+    | NL_IF of nl_exp * nl_exp * nl_exp
+    | NL_LET of nl_exp * nl_exp
+    | NL_PROC of nl_exp 
+    | NL_CALL of nl_exp * nl_exp
+    *)
+ 
   let nl_run : nl_program -> nl_value
-  =fun pgm -> NL_Int 0 (* TODO *)
+  =fun pgm -> eval pgm empty_env;;
 end

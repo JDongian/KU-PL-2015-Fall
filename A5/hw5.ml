@@ -85,7 +85,7 @@ let rec gen_equations : TEnv.t -> exp -> typ -> typ_eqn
         let a2 = fresh_tyvar() in
         let a = TyFun(a1,a2) in
         let new_tenv = TEnv.extend (x,a1) tenv in
-        (ty,a)::(gen_equations new_tenv e ty)
+        (ty,a)::(gen_equations new_tenv e a2)
     | CALL (e1,e2) ->
         let a = fresh_tyvar() in
         let a_t = TyFun(a,ty) in
@@ -96,16 +96,13 @@ let rec unify : typ -> typ -> Subst.t -> Subst.t
     | (TyInt,TyInt) -> s
     | (TyBool,TyBool) -> s
     | (t,TyVar a) -> unify (TyVar a) t s
-    | (TyVar a,t) -> Subst.extend a t s
-            (*
-        let result = try Subst.find a s with _ -> TyVar "_fail" in
-        (match result with
-        | TyVar "_fail" -> Subst.extend a t s
-        | _ -> raise TypeError) 
-         *)
+    | (TyVar a,t) ->
+        if t1 = t2
+            then raise TypeError
+            else Subst.extend a t s
     | (TyFun (t1,t2),TyFun (t'1,t'2)) ->
-        let s' = unify t1 t'1 s in (* CHECK THIS *)
-        let t''1 = Subst.apply t'1 s' in
+        let s' = unify t1 t'1 s in
+        let t''1 = Subst.apply t2 s' in
         let t''2 = Subst.apply t'2 s' in
         unify t''1 t''2 s'
     | _ -> raise TypeError
@@ -129,41 +126,39 @@ let typeof : exp -> typ
   let ty = Subst.apply new_tv subst in
     ty
 
-;;
-let p0 = SUB (CONST 1, CONST 2);;
-let p1 = PROC ("a", ADD (VAR "a", CONST 2));;
+(* TESTS *)
+
 (*
-let result = try typeof p0 with _ ->
-    (print_string("Failed test 0: found TypeError where none existed\n"); TyBool) in
-match result with
- | TyFun (TyInt, TyInt) -> print_string("Pass 0\n")
- | _ -> print_string("Failed test 0: incorrect answer\n")
 ;;
-*)
-(*
-let p1 = SUB (CONST 1, CONST 2) in
+let p0 = SUB (CONST 1, CONST 2) in
 let result = try typeof p0 with _ ->
     (print_string("Failed test 0: found TypeError where none existed\n"); TyBool) in
 match result with
  | TyInt -> print_string("Pass 0\n")
- | _ -> print_string("Failed test 0: incorrect answer\n");;
-*)
+ | _ -> print_string("Failed test 0: incorrect answer\n")
+;;
 
-(*
 let p1 = PROC ("f", PROC ("x", SUB (CALL (VAR "f", CONST 3), CALL (VAR "f", VAR "x")))) in
-let result = try typeof p1 with _ -> (print_string("Failed test 1: found TypeError where none existed\n"); TyInt) in
+let result = try typeof p1 with _ ->
+    (print_string("Failed test 1: found TypeError where none existed\n"); TyBool) in
 match result with
  | TyFun (TyFun (TyInt, TyInt), TyFun (TyInt, TyInt)) -> print_string("Pass 1\n")
- | _ -> print_string("Failed test 1: incorrect answer\n");;
- 
+ | _ -> print_string("Failed test 1: incorrect answer\n")
+;;
+
 let p2 = PROC ("f", CALL (VAR "f", CONST 11)) in
-try typeof p2 with
- | TyFun (TyFun (TyInt, TyVar "t"), TyVar "t") -> print_string("Pass 1\n")
- | TypeError -> print_string("Failed test 2: found TypeError where none existed\n")
- | _ -> print_string("Failed test 2: incorrect answer\n");;
+let result = try typeof p2 with _ ->
+    (print_string("Failed test 2: found TypeError where none existed\n"); TyBool) in
+match result with
+ | TyFun (TyFun (TyInt, TyVar a), TyVar b) when a = b -> print_string("Pass 2\n")
+ | _ -> print_string("Failed test 2: incorrect answer\n")
+;;
 
 let p3 = LET ("x", CONST 1, IF (VAR "x", SUB (VAR "x", CONST 1), CONST 0)) in
-try typeof p2 with
- | TypeError -> print_string("Pass 1\n")
- | _ -> print_string("Failed test 3: did not find TypeError\n");;
+let result = try typeof p3 with _ ->
+    (print_string("Pass 3\n"); TyBool) in
+match result with
+ | TyBool -> ()
+ | _ -> print_string("Failed test 3: did not find TypeError\n")
+;;
 *)
